@@ -1,5 +1,6 @@
-package streams
+package packet
 
+/*
 import (
 	"bytes"
 	"encoding/binary"
@@ -8,6 +9,7 @@ import (
 	"io"
 	"os"
 )
+*/
 
 /*
  * this implement from VLC source code
