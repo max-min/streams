@@ -1,19 +1,19 @@
 package packet
 
-/*
-import (
-	"bytes"
-	"encoding/binary"
-	"errors"
-	"fmt"
-	"io"
-	"os"
+
+
+ const (
+	START_CODE_PS  = 0x000001ba
+	START_CODE_SYS = 0x000001bb
+	START_CODE_MAP = 0x000001bc
+	START_CODE_PES_VIDEO = 0x000001e0
+	START_CODE_PES_AUDIO = 0x000001c0
 )
-*/
+
 
 /*
- * this implement from VLC source code
- * operate the bit,but not byte
+ * This implement from VLC source code
+ * Notice:operate the bit,but not byte
  */
 
 //BitsBuffer bits buffer
