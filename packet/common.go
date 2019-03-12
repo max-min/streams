@@ -1,31 +1,43 @@
 package packet
 
+//
 const (
-	STREAM_TYPE_H264 = 0x1b
-	STREAM_TYPE_AAC  = 0x90
+	UDPTransfer        int = 0
+	TCPTransferActive  int = 1
+	TCPTransferPassive int = 2
 )
 
+//
 const (
-	STREAM_ID_VIDEO = 0xe0
-	STREAM_ID_AUDIO = 0xc0
-)
- const (
-	START_CODE_PS  		 = 0x000001ba
-	START_CODE_SYS 	   	 = 0x000001bb
-	START_CODE_MAP		 = 0x000001bc
-	START_CODE_PES_VIDEO = 0x000001e0
-	START_CODE_PES_AUDIO = 0x000001c0
+	StreamTypeH264 = 0x1b
+	StreamTypeH265 = 0x24
+	StreamTypeAAC  = 0x90
 )
 
-//len limit
+//
 const (
-	RTP_HEADER_LENGTH    int = 12
-	PS_HEADER_LENGTH     int = 14
-	SYSTEM_HEADER_LENGTH int = 18
-	MAP_HEADER_LENGTH    int = 24
-	PES_HEADER_LENGTH    int = 19
-	RTP_LOAD_LENGTH      int = 1460
-	PES_LOAD_LENGTH      int = 0xFFFF
+	StreamIDVideo = 0xe0
+	StreamIDAudio = 0xc0
+)
+
+//
+const (
+	StartCodePS    = 0x000001ba
+	StartCodeSYS   = 0x000001bb
+	StartCodeMAP   = 0x000001bc
+	StartCodeVideo = 0x000001e0
+	StartCodeAudio = 0x000001c0
+)
+
+//... len limit
+const (
+	RTPHeaderLength    int = 12
+	PSHeaderLength     int = 14
+	SystemHeaderLength int = 18
+	MAPHeaderLength    int = 24
+	PESHeaderLength    int = 19
+	RtpLoadLength      int = 1460
+	PESLoadLength      int = 0xFFFF
 )
 
 /*
@@ -49,7 +61,6 @@ func bitsInit(isize int, buffer []byte) *BitsBuffer {
 		iMask: 0x80,
 		pData: buffer,
 	}
-
 	if bits.pData == nil {
 		bits.pData = make([]byte, isize)
 	}
@@ -65,7 +76,6 @@ func bitsWrite(bits *BitsBuffer, count int, src uint64) *BitsBuffer {
 		} else {
 			bits.pData[bits.iData] &= ^bits.iMask
 		}
-
 		bits.iMask >>= 1
 		if bits.iMask == 0 {
 			bits.iData++
