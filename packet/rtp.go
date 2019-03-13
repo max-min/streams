@@ -5,22 +5,24 @@ import (
 	"math/rand"
 	"net"
 	"strconv"
+	"time"
 
 	log "github.com/sirupsen/logrus"
 )
 
 //RtpTransfer ...
 type RtpTransfer struct {
-	datasrc   string
-	protocol  int // tcp or udp
-	psEnc     *encPSPacket
-	payload   chan []byte
-	cseq      uint16
-	ssrc      uint32
-	udpconn   *net.UDPConn
-	tcpconn   net.Conn
-	writestop chan bool
-	quit      chan bool
+	datasrc      string
+	protocol     int // tcp or udp
+	psEnc        *encPSPacket
+	payload      chan []byte
+	cseq         uint16
+	ssrc         uint32
+	udpconn      *net.UDPConn
+	tcpconn      net.Conn
+	writestop    chan bool
+	quit         chan bool
+	timerProcess *time.Ticker
 }
 
 func NewRtpService(src string, pro int) *RtpTransfer {
@@ -40,6 +42,9 @@ func NewRtpService(src string, pro int) *RtpTransfer {
 //Service ...
 func (rtp *RtpTransfer) Service(srcip, dstip string, srcport, dstport int) error {
 
+	if nil == rtp.timerProcess {
+		rtp.timerProcess = time.NewTicker(time.Second * time.Duration(5))
+	}
 	if rtp.protocol == TCPTransferPassive {
 		go rtp.write4tcppassive(srcip+":"+strconv.Itoa(srcport),
 			dstip+":"+strconv.Itoa(dstport))
@@ -71,11 +76,14 @@ func (rtp *RtpTransfer) Service(srcip, dstip string, srcport, dstport int) error
 //Exit ...
 func (rtp *RtpTransfer) Exit() {
 
+	if nil != rtp.timerProcess {
+		rtp.timerProcess.Stop()
+	}
 	close(rtp.writestop)
 	<-rtp.quit
 }
 
-func (rtp *RtpTransfer) send2data(data []byte, key bool, pts uint64) {
+func (rtp *RtpTransfer) Send2data(data []byte, key bool, pts uint64) {
 	psSys := rtp.psEnc.addPSHeader(pts)
 	if key { // just I frame will add this
 		psSys = rtp.psEnc.addSystemHeader(psSys, 2048, 512)
@@ -166,19 +174,22 @@ func (rtp *RtpTransfer) write4udp() {
 					lens, err := rtp.udpconn.Write(data)
 					if err != nil || lens != len(data) {
 						log.Errorf("write data by udp error(%v), len(%v).", err, lens)
-						goto SENDSTOP
+						goto WRITESTOP
 					}
 				}
 			} else {
-				log.Errorf("rtp data channel closed")
-				goto SENDSTOP
+				log.Error("rtp data channel closed")
+				goto WRITESTOP
 			}
+		case <-rtp.timerProcess.C:
+			log.Error("channel recv data timeout")
+			goto WRITESTOP
 		case <-rtp.writestop:
 			log.Error("udp rtp send channel stop")
-			goto SENDSTOP
+			goto WRITESTOP
 		}
 	}
-SENDSTOP:
+WRITESTOP:
 	rtp.udpconn.Close()
 	rtp.quit <- true
 }
@@ -201,7 +212,7 @@ func (rtp *RtpTransfer) write4tcppassive(srcaddr, dstaddr string) {
 	}
 	for {
 		if rtp.tcpconn == nil {
-			goto TCPSENDSTOP
+			goto WRITESTOP
 		}
 		select {
 		case data, ok := <-rtp.payload:
@@ -209,19 +220,22 @@ func (rtp *RtpTransfer) write4tcppassive(srcaddr, dstaddr string) {
 				lens, err := rtp.tcpconn.Write(data)
 				if err != nil || lens != len(data) {
 					log.Errorf("write data by tcp error(%v), len(%v).", err, lens)
-					goto TCPSENDSTOP
+					goto WRITESTOP
 				}
 
 			} else {
 				log.Errorf("data channel closed")
-				goto TCPSENDSTOP
+				goto WRITESTOP
 			}
+		case <-rtp.timerProcess.C:
+			log.Error("channel write data timeout")
+			goto WRITESTOP
 		case <-rtp.writestop:
 			log.Error("tcp rtp send channel stop")
-			goto TCPSENDSTOP
+			goto WRITESTOP
 		}
 	}
-TCPSENDSTOP:
+WRITESTOP:
 	rtp.tcpconn.Close()
 	rtp.quit <- true
 }
