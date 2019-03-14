@@ -6,6 +6,7 @@
 | ps | system header | psm | pesv | pesa |
 `pesv`为视频pes包， `pesa`为音频pes包
 **非关键帧的ps包结构一般不包含系统头和PSM**
+
 针对PSM中流类型的取值如下：
 | 流类型     |   十六进制值|
 |-----------|-----------|

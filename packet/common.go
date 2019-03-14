@@ -1,5 +1,7 @@
 package packet
 
+import "errors"
+
 //
 const (
 	UDPTransfer        int = 0
@@ -38,6 +40,11 @@ const (
 	PESHeaderLength    int = 19
 	RtpLoadLength      int = 1460
 	PESLoadLength      int = 0xFFFF
+)
+
+var (
+	ErrNotFoundStartCode = errors.New("not found the need start code flag")
+	ErrMarkerBit         = errors.New("marker bit value error")
 )
 
 /*
