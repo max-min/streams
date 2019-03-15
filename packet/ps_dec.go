@@ -1,6 +1,8 @@
 package packet
 
 import (
+	"io"
+
 	"github.com/32bitkid/bitreader"
 )
 
@@ -8,10 +10,14 @@ type DecPSPackage struct {
 	systemClockReferenceBase      uint64
 	systemClockReferenceExtension uint64
 	programMuxRate                uint32
-	streamType                    int
+
+	rawData         []byte
+	rawLen          int
+	videoStreamType uint32
+	audioStreamType uint32
 }
 
-func (dec *DecPSPackage) decPSHeader(br bitreader.BitReader) ([]byte, error) {
+func (dec *DecPSPackage) decPackHeader(br bitreader.BitReader) ([]byte, error) {
 
 	startcode, err := br.Read32(32)
 	if err != nil {
@@ -101,30 +107,133 @@ func (dec *DecPSPackage) decPSHeader(br bitreader.BitReader) ([]byte, error) {
 			return nil, err
 		}
 
-		// how to do that ??
 		switch nextStartCode {
 		case StartCodeSYS:
-			//dec.decSystemHeader(br)
+			if err := dec.decSystemHeader(br); err != nil {
+				return nil, err
+			}
 		case StartCodeMAP:
-			//dec.decSystemMapHeader(br)
+			if err := dec.decProgramStreamMap(br); err != nil {
+				return nil, err
+			}
 		case StartCodeVideo:
 			fallthrough
 		case StartCodeAudio:
-			dec.decPESHeader(br)
+			if err := dec.decPESPacket(br); err != nil {
+				return nil, err
+			}
 		}
 	}
 
-	return nil, ErrNotFoundStartCode
+	return dec.rawData[:dec.rawLen], nil
 }
 
-func (dec *DecPSPackage) decSystemHeader(br bitreader.BitReader) ([]byte, error) {
-	return nil, nil
+func (dec *DecPSPackage) decSystemHeader(br bitreader.BitReader) error {
+	syslens, err := br.Read32(16)
+	if err != nil {
+		return err
+	}
+	// drop rate video audio bound and lock flag
+	syslens -= 6
+	br.Skip(6 * 8)
+
+	// ONE WAY: do not to parse the stream  and skip the buffer
+	//br.Skip(syslen * 8)
+
+	// TWO WAY: parse every stream info
+	for syslens > 0 {
+		if nextbits, err := br.Peek32(1); err != nil {
+			return err
+		} else if nextbits == 1 {
+			break
+		}
+
+		if _, err := br.Read32(8); err != nil {
+			return err
+		}
+		if _, err := br.Read32(2); err != nil {
+			return err
+		}
+		if _, err := br.Read1(); err != nil {
+			return err
+		}
+		if _, err := br.Read32(13); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
-func (dec *DecPSPackage) decSystemMapHeader(br bitreader.BitReader) ([]byte, error) {
-	return nil, nil
+func (dec *DecPSPackage) decProgramStreamMap(br bitreader.BitReader) error {
+	psm, err := br.Read32(16)
+	if err != nil {
+		return err
+	}
+	//drop psm version infor
+	br.Skip(16)
+	psm -= 2
+	if programStreamInfoLen, err := br.Read32(16); err != nil {
+		return err
+	} else {
+		br.Skip(uint(programStreamInfoLen * 8))
+		psm -= (programStreamInfoLen + 2)
+	}
+	programStreamMapLen, err := br.Read32(16)
+	if err != nil {
+		return err
+	}
+	psm -= (2 + programStreamMapLen)
+	for programStreamMapLen > 0 {
+		streamType, err := br.Read32(8)
+		if err != nil {
+			return err
+		}
+		if elementaryStreamID, err := br.Read32(8); err != nil {
+			return err
+		} else if elementaryStreamID >= 0xe0 && elementaryStreamID <= 0xef {
+			dec.videoStreamType = streamType
+		} else if elementaryStreamID >= 0xc0 && elementaryStreamID <= 0xdf {
+			dec.audioStreamType = streamType
+		}
+		if elementaryStreamInfoLength, err := br.Read32(16); err != nil {
+			return err
+		} else {
+			br.Skip(uint(elementaryStreamInfoLength * 8))
+			programStreamMapLen -= (4 + elementaryStreamInfoLength)
+		}
+
+	}
+
+	// crc 32
+	if psm != 4 {
+		return ErrFormatPack
+	}
+	br.Skip(32)
+	return nil
 }
 
-func (dec *DecPSPackage) decPESHeader(br bitreader.BitReader) ([]byte, error) {
-	return nil, nil
+func (dec *DecPSPackage) decPESPacket(br bitreader.BitReader) error {
+
+	payloadlen, err := br.Read32(16)
+	if err != nil {
+		return err
+	}
+	br.Skip(16)
+
+	payloadlen -= 2
+	if pesHeaderDataLen, err := br.Read32(8); err != nil {
+		return err
+	} else {
+		payloadlen--
+		br.Skip(uint(pesHeaderDataLen * 8))
+		payloadlen -= pesHeaderDataLen
+	}
+
+	if n, err := io.ReadAtLeast(br, dec.rawData[dec.rawLen:], int(payloadlen)); err != nil {
+		return err
+	} else {
+		dec.rawLen += n
+	}
+
+	return nil
 }

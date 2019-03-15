@@ -4,7 +4,7 @@ type encPSPacket struct {
 	crc32 uint64
 }
 
-func (enc *encPSPacket) encPSHeader(pts uint64) []byte {
+func (enc *encPSPacket) encPackHeader(pts uint64) []byte {
 	pack := make([]byte, PSHeaderLength)
 	bits := bitsInit(PSHeaderLength, pack)
 	bitsWrite(bits, 32, StartCodePS)
@@ -58,7 +58,7 @@ func (enc *encPSPacket) encSystemHeader(data []byte, vrates, arates int) []byte 
 	return append(data, bits.pData...)
 }
 
-func (enc *encPSPacket) encMapHeader(data []byte) []byte {
+func (enc *encPSPacket) encProgramStreamMap(data []byte) []byte {
 
 	pack := make([]byte, MAPHeaderLength)
 	bits := bitsInit(MAPHeaderLength, pack)
@@ -88,7 +88,7 @@ func (enc *encPSPacket) encMapHeader(data []byte) []byte {
 	return append(data, bits.pData...)
 }
 
-func (enc *encPSPacket) encPESHeader(data []byte, streamtype int, payloadlen int, pts, dts uint64) []byte {
+func (enc *encPSPacket) encPESPacket(data []byte, streamtype int, payloadlen int, pts, dts uint64) []byte {
 
 	pack := make([]byte, PESHeaderLength)
 	bits := bitsInit(PESHeaderLength, pack)
@@ -124,6 +124,7 @@ func (enc *encPSPacket) encPESHeader(data []byte, streamtype int, payloadlen int
 
 	bitsWrite(bits, 4, 1)
 	bitsWrite(bits, 3, (dts>>30)&0x07)
+	bitsWrite(bits, 1, 1)
 	bitsWrite(bits, 15, (dts>>15)&0x7fff)
 	bitsWrite(bits, 1, 1)
 	bitsWrite(bits, 15, dts&0x7fff)

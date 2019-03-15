@@ -40,11 +40,13 @@ const (
 	PESHeaderLength    int = 19
 	RtpLoadLength      int = 1460
 	PESLoadLength      int = 0xFFFF
+	MAXFrameLen        int = 1024 * 1024 * 2
 )
 
 var (
 	ErrNotFoundStartCode = errors.New("not found the need start code flag")
 	ErrMarkerBit         = errors.New("marker bit value error")
+	ErrFormatPack        = errors.New("not package standard")
 )
 
 /*

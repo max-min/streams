@@ -60,11 +60,11 @@
 | vedio_bound |5| 视频界限字段 |
 | packet_rate_restriction_flag|1 |分组速率限制标记字段|
 | reserved_bits |7| 保留位字段|
-| stream_id |8| 流标志字段  一般`0xe0`指视频，`0xc0`音频	|
+| stream_id |8| 流标志字段  一般`0xe0`指视频，`0xc0`音频|
 | marker_bit |2|取值`11` |
 | P-STD_buffer_bound_scale |1b| P-STD界限比例字段|
 |P-STD_buffer_size_bound |13|P-STD大小界限字段|
-注：可能会有多个stream 
+注：可能会有多个stream , 通过stream_id的第一个bit判断是否存在stream
 
 #### Map
 | 字段名 | 比特位长度 | 含义|
