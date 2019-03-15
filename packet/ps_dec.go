@@ -101,6 +101,7 @@ func (dec *DecPSPackage) decPackHeader(br bitreader.BitReader) ([]byte, error) {
 	}
 
 	// 判断是否位关键帧， I帧会有system头 systemap头
+	// Take a attension: how to exit the cycled,
 	for {
 		nextStartCode, err := br.Read32(32)
 		if err != nil {
