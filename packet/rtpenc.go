@@ -133,14 +133,14 @@ func (rtp *RtpTransfer) fragmentation(data []byte, pts uint64, last int) {
 				marker = 1
 				sendlen = datalen
 			}
-			payload := rtp.addRtpHeader(data[index:index+sendlen], marker&last, pts)
+			payload := rtp.encRtpHeader(data[index:index+sendlen], marker&last, pts)
 			rtp.payload <- payload
 			datalen -= sendlen
 			index += sendlen
 		}
 	}
 }
-func (rtp *RtpTransfer) addRtpHeader(data []byte, marker int, curpts uint64) []byte {
+func (rtp *RtpTransfer) encRtpHeader(data []byte, marker int, curpts uint64) []byte {
 	rtp.cseq++
 	pack := make([]byte, RTPHeaderLength)
 	bits := bitsInit(RTPHeaderLength, pack)

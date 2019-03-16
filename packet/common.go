@@ -47,6 +47,7 @@ var (
 	ErrNotFoundStartCode = errors.New("not found the need start code flag")
 	ErrMarkerBit         = errors.New("marker bit value error")
 	ErrFormatPack        = errors.New("not package standard")
+	ErrParsePakcet       = errors.New("parse ps packet error")
 )
 
 /*
