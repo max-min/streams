@@ -24,11 +24,12 @@ const (
 
 //
 const (
-	StartCodePS    = 0x000001ba
-	StartCodeSYS   = 0x000001bb
-	StartCodeMAP   = 0x000001bc
-	StartCodeVideo = 0x000001e0
-	StartCodeAudio = 0x000001c0
+	StartCodePS        = 0x000001ba
+	StartCodeSYS       = 0x000001bb
+	StartCodeMAP       = 0x000001bc
+	StartCodeVideo     = 0x000001e0
+	StartCodeAudio     = 0x000001c0
+	MEPGProgramEndCode = 0x000001b9
 )
 
 //... len limit

@@ -101,13 +101,9 @@ func (dec *DecPSPackage) decPackHeader(br bitreader.BitReader) ([]byte, error) {
 	}
 
 	// 判断是否位关键帧， I帧会有system头 systemap头
-	// Take a attension: how to exit the cycled will be more well
 	for {
 		nextStartCode, err := br.Read32(32)
 		if err != nil {
-			if err == io.ErrUnexpectedEOF {
-				return dec.rawData[:dec.rawLen], nil
-			}
 			return nil, err
 		}
 
@@ -126,6 +122,8 @@ func (dec *DecPSPackage) decPackHeader(br bitreader.BitReader) ([]byte, error) {
 			if err := dec.decPESPacket(br); err != nil {
 				return nil, err
 			}
+		case MEPGProgramEndCode:
+			return dec.rawData[:dec.rawLen], nil
 		}
 	}
 
