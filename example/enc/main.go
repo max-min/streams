@@ -3,14 +3,20 @@ package main
 import (
 	"streams/packet"
 
+	"github.com/nareix/joy4/format"
+
 	"github.com/nareix/joy4/av"
 	"github.com/nareix/joy4/av/avutil"
 	log "github.com/sirupsen/logrus"
 )
 
+func init() {
+	format.RegisterAll()
+}
+
 func main() {
 
-	rtp := packet.NewRtpService("", packet.UDPTransfer)
+	rtp := packet.NewRRtpTransfer("", packet.LocalCache)
 
 	rtp.Service("127.0.0.1", "172.20.25.2", 10086, 10087)
 
@@ -35,13 +41,14 @@ func main() {
 		var err error
 		if pkt, err = f.ReadPacket(); err != nil {
 			log.Errorf("read packet error(%v)", err)
+			rtp.Exit()
 			return
 		}
 		if pkt.Idx != vindex {
 			continue
 		}
-
 		rtp.Send2data(pkt.Data, pkt.IsKeyFrame, pts)
 		pts += 40
+		//time.Sleep(time.Millisecond * 40)
 	}
 }
