@@ -126,8 +126,6 @@ func (dec *DecPSPackage) decPackHeader(br bitreader.BitReader) ([]byte, error) {
 			return dec.rawData[:dec.rawLen], nil
 		}
 	}
-
-	return nil, ErrParsePakcet
 }
 
 func (dec *DecPSPackage) decSystemHeader(br bitreader.BitReader) error {
@@ -231,10 +229,12 @@ func (dec *DecPSPackage) decPESPacket(br bitreader.BitReader) error {
 		payloadlen -= pesHeaderDataLen
 	}
 
-	if n, err := io.ReadAtLeast(br, dec.rawData[dec.rawLen:], int(payloadlen)); err != nil {
+	payloaddata := make([]byte, payloadlen)
+	if _, err := io.ReadAtLeast(br, payloaddata, int(payloadlen)); err != nil {
 		return err
 	} else {
-		dec.rawLen += n
+		copy(dec.rawData[dec.rawLen:], payloaddata)
+		dec.rawLen += int(payloadlen)
 	}
 
 	return nil

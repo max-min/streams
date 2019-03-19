@@ -7,6 +7,7 @@ const (
 	UDPTransfer        int = 0
 	TCPTransferActive  int = 1
 	TCPTransferPassive int = 2
+	LocalCache         int = 3
 )
 
 //

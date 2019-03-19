@@ -4,6 +4,7 @@ import (
 	"errors"
 	"math/rand"
 	"net"
+	"os"
 	"strconv"
 	"time"
 
@@ -25,7 +26,7 @@ type RtpTransfer struct {
 	timerProcess *time.Ticker
 }
 
-func NewRtpService(src string, pro int) *RtpTransfer {
+func NewRRtpTransfer(src string, pro int) *RtpTransfer {
 
 	return &RtpTransfer{
 		datasrc:   src,
@@ -67,6 +68,9 @@ func (rtp *RtpTransfer) Service(srcip, dstip string, srcport, dstport int) error
 		}
 		rtp.udpconn = conn
 		go rtp.write4udp()
+	} else if rtp.protocol == LocalCache {
+		// write file
+		go rtp.write4file()
 	} else {
 		return errors.New("unknown transfer way")
 	}
@@ -120,9 +124,8 @@ func (rtp *RtpTransfer) Send2data(data []byte, key bool, pts uint64) {
 
 func (rtp *RtpTransfer) fragmentation(data []byte, pts uint64, last int) {
 	datalen := len(data)
-
 	if datalen+RTPHeaderLength <= RtpLoadLength {
-		payload := rtp.addRtpHeader(data[:], 1, pts)
+		payload := rtp.encRtpHeader(data[:], 1, pts)
 		rtp.payload <- payload
 	} else {
 		marker := 0
@@ -141,6 +144,10 @@ func (rtp *RtpTransfer) fragmentation(data []byte, pts uint64, last int) {
 	}
 }
 func (rtp *RtpTransfer) encRtpHeader(data []byte, marker int, curpts uint64) []byte {
+
+	if rtp.protocol == LocalCache {
+		return data
+	}
 	rtp.cseq++
 	pack := make([]byte, RTPHeaderLength)
 	bits := bitsInit(RTPHeaderLength, pack)
@@ -175,28 +182,29 @@ func (rtp *RtpTransfer) write4udp() {
 					lens, err := rtp.udpconn.Write(data)
 					if err != nil || lens != len(data) {
 						log.Errorf("write data by udp error(%v), len(%v).", err, lens)
-						goto WRITESTOP
+						goto UDPSTOP
 					}
 				}
 			} else {
 				log.Error("rtp data channel closed")
-				goto WRITESTOP
+				goto UDPSTOP
 			}
 		case <-rtp.timerProcess.C:
 			log.Error("channel recv data timeout")
-			goto WRITESTOP
+			goto UDPSTOP
 		case <-rtp.writestop:
 			log.Error("udp rtp send channel stop")
-			goto WRITESTOP
+			goto UDPSTOP
 		}
 	}
-WRITESTOP:
+UDPSTOP:
 	rtp.udpconn.Close()
 	rtp.quit <- true
 }
 
 func (rtp *RtpTransfer) write4tcppassive(srcaddr, dstaddr string) {
 
+	log.Infof(" stream data will be write by(%v)", rtp.protocol)
 	addr, err := net.ResolveTCPAddr("tcp", srcaddr)
 	if err != nil {
 		log.Errorf("net.ResolveTCPAddr error(%v).", err)
@@ -213,7 +221,7 @@ func (rtp *RtpTransfer) write4tcppassive(srcaddr, dstaddr string) {
 	}
 	for {
 		if rtp.tcpconn == nil {
-			goto WRITESTOP
+			goto TCPPASSIVESTOP
 		}
 		select {
 		case data, ok := <-rtp.payload:
@@ -221,22 +229,55 @@ func (rtp *RtpTransfer) write4tcppassive(srcaddr, dstaddr string) {
 				lens, err := rtp.tcpconn.Write(data)
 				if err != nil || lens != len(data) {
 					log.Errorf("write data by tcp error(%v), len(%v).", err, lens)
-					goto WRITESTOP
+					goto TCPPASSIVESTOP
 				}
 
 			} else {
 				log.Errorf("data channel closed")
-				goto WRITESTOP
+				goto TCPPASSIVESTOP
 			}
 		case <-rtp.timerProcess.C:
-			log.Error("channel write data timeout")
-			goto WRITESTOP
+			log.Error("channel write data timeout when tcp send")
+			goto TCPPASSIVESTOP
 		case <-rtp.writestop:
 			log.Error("tcp rtp send channel stop")
-			goto WRITESTOP
+			goto TCPPASSIVESTOP
 		}
 	}
-WRITESTOP:
+TCPPASSIVESTOP:
 	rtp.tcpconn.Close()
+	rtp.quit <- true
+}
+
+func (rtp *RtpTransfer) write4file() {
+
+	log.Infof(" stream data will be write by(%v)", rtp.protocol)
+	files, err := os.OpenFile("./test.dat", os.O_CREATE|os.O_WRONLY, 0666)
+	if err != nil {
+		log.Errorf("open test.dat file err(%v", err)
+		return
+	}
+
+	for {
+		select {
+		case data, ok := <-rtp.payload:
+			if ok {
+				lens, err := files.Write(data)
+				if err != nil || lens != len(data) {
+					log.Errorf("write data by file error(%v), len(%v).", err, lens)
+					goto FILESTOP
+				}
+
+			} else {
+				log.Error("data channel closed when write file")
+				goto FILESTOP
+			}
+		case <-rtp.writestop:
+			log.Error("write file channel stop")
+			goto FILESTOP
+		}
+	}
+FILESTOP:
+	files.Close()
 	rtp.quit <- true
 }

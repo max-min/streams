@@ -1,3 +1,5 @@
 .DS_Store
-example/*.flv
-example/*.mp4
+example/enc/*.flv
+example/enc/*.mp4
+example/enc/*.dat
+example/dec/*.dat
