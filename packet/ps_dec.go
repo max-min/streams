@@ -6,6 +6,9 @@ import (
 	"github.com/32bitkid/bitreader"
 )
 
+/*
+https://github.com/videolan/vlc/blob/master/modules/demux/mpeg
+*/
 type DecPSPackage struct {
 	systemClockReferenceBase      uint64
 	systemClockReferenceExtension uint64

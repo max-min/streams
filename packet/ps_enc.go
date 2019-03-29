@@ -4,6 +4,10 @@ type encPSPacket struct {
 	crc32 uint64
 }
 
+/*
+	https://github.com/videolan/vlc/tree/master/modules/mux/mpeg
+*/
+
 func (enc *encPSPacket) encPackHeader(pts uint64) []byte {
 	pack := make([]byte, PSHeaderLength)
 	bits := bitsInit(PSHeaderLength, pack)
@@ -41,7 +45,7 @@ func (enc *encPSPacket) encSystemHeader(data []byte, vrates, arates int) []byte 
 	bitsWrite(bits, 1, 1)
 	bitsWrite(bits, 5, 1)
 	bitsWrite(bits, 1, 1)
-	bitsWrite(bits, 7, 0x7f)
+	bitsWrite(bits, 7, 0xff)
 
 	// video stream bound
 	bitsWrite(bits, 8, 0xe0)
@@ -51,7 +55,7 @@ func (enc *encPSPacket) encSystemHeader(data []byte, vrates, arates int) []byte 
 
 	// audio stream bound
 	bitsWrite(bits, 8, 0xc0) // 0xc0 音频
-	bitsWrite(bits, 2, 3)
+	bitsWrite(bits, 2, 0x03)
 	bitsWrite(bits, 1, 0)
 	bitsWrite(bits, 13, uint64(arates))
 

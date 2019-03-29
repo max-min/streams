@@ -53,21 +53,21 @@ var (
 )
 
 /*
- * This implement from VLC source code
- * Notice:operate the bit,but not byte
- */
+ This implement from VLC source code
+ notes: https://github.com/videolan/vlc/blob/master/modules/mux/mpeg/bits.h
+*/
 
-//BitsBuffer bits buffer
-type BitsBuffer struct {
+//bitsBuffer bits buffer
+type bitsBuffer struct {
 	iSize int
 	iData int
 	iMask uint8
 	pData []byte
 }
 
-func bitsInit(isize int, buffer []byte) *BitsBuffer {
+func bitsInit(isize int, buffer []byte) *bitsBuffer {
 
-	bits := &BitsBuffer{
+	bits := &bitsBuffer{
 		iSize: isize,
 		iData: 0,
 		iMask: 0x80,
@@ -79,7 +79,15 @@ func bitsInit(isize int, buffer []byte) *BitsBuffer {
 	return bits
 }
 
-func bitsWrite(bits *BitsBuffer, count int, src uint64) *BitsBuffer {
+func bitsAlign(bits *bitsBuffer) {
+
+	if bits.iMask != 0x80 && bits.iData < bits.iSize {
+		bits.iMask = 0x80
+		bits.iData++
+		bits.pData[bits.iData] = 0x00
+	}
+}
+func bitsWrite(bits *bitsBuffer, count int, src uint64) *bitsBuffer {
 
 	for count > 0 {
 		count--
