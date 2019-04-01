@@ -18,11 +18,13 @@ func main() {
 
 	rtp := packet.NewRRtpTransfer("", packet.LocalCache)
 
+	// send ip,port and recv ip,port
 	rtp.Service("127.0.0.1", "172.20.25.2", 10086, 10087)
 
 	f, err := avutil.Open("test.flv")
 	if err != nil {
 		log.Errorf("read file error(%v)", err)
+		rtp.Exit()
 		return
 	}
 
@@ -36,13 +38,12 @@ func main() {
 		}
 	}
 
-	for {
+	for i := 0; i < 10; i++ {
 		var pkt av.Packet
 		var err error
 		if pkt, err = f.ReadPacket(); err != nil {
 			log.Errorf("read packet error(%v)", err)
-			rtp.Exit()
-			return
+			goto STOP
 		}
 		if pkt.Idx != vindex {
 			continue
@@ -51,4 +52,9 @@ func main() {
 		pts += 40
 		//time.Sleep(time.Millisecond * 40)
 	}
+STOP:
+	f.Close()
+	rtp.Exit()
+	return
+
 }
