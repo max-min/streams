@@ -232,11 +232,10 @@ func (dec *DecPSPackage) decPESPacket(br bitreader.BitReader) error {
 		payloadlen -= pesHeaderDataLen
 	}
 
-	payloaddata := make([]byte, payloadlen)
+	payloaddata := dec.rawData[dec.rawLen : dec.rawLen+int(payloadlen)]
 	if _, err := io.ReadAtLeast(br, payloaddata, int(payloadlen)); err != nil {
 		return err
 	} else {
-		copy(dec.rawData[dec.rawLen:], payloaddata)
 		dec.rawLen += int(payloadlen)
 	}
 
